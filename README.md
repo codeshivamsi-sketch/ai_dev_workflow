@@ -138,22 +138,15 @@ flowchart TD
 
 ## Stage 3: Review — author ≠ examiner
 
-An agent reviewing its own code just verifies its own assumptions. Review must be independent.
+An agent reviewing its own code just verifies its own assumptions — so review runs through three commands, each independent of the session that wrote the code:
 
-### 💥 Code blast — same codegraph, `/blast` command
-- **What:** One command traces every changed **symbol** in your diff and its complete dependency closure — callers, importers, inheritors — with no depth limit, hop counts included.
-- **Solves:** "This PR touches 3 files" hiding "…and impacts 40 more." Symbol-level, not file-level: a one-line change doesn't taint every symbol in the file.
-- **How:** `/blast` (analyzes `git diff main`) or `/blast src/payments/` for specific paths. Output: a hop-sorted dependents table, a mermaid flowchart of the closure (changed vs impacted marked), untested nodes, and a plain-language risk assessment — saved as a timestamped snapshot in `docs/blast/`.
+- **`/blast [paths]`** — the blast radius, human-viewable: hop-sorted table of every changed symbol's full dependency closure + a mermaid graph (changed vs impacted marked, cross-service/MFE edges dashed = inferred) + untested nodes + risk paragraph → saved as a timestamped snapshot in `docs/blast/`.
+- **`/review`** — pipes the diff to a **fresh `claude -p` instance** (no memory of the author session) and relays findings: bugs, edge cases, violated invariants, with file:line.
+- **`/ponytail-review`** — the opposite class of problem: code that shouldn't exist. Hands back a delete-list.
+
 
 ![Code blast](images/code_blast_2.png)
 
-### 🔍 Claude as the reviewer — `/review` command
-- **What:** `/review` pipes your diff to a **fresh** `claude -p` instance and relays its findings:
-```bash
-  git diff main | claude -p "Review this diff: bugs, edge cases, violated invariants from CLAUDE.md and docs/adr/"
-```
-- **Why the command spawns a separate instance:** the session that *wrote* the code must never be the session that *reviews* it — a fresh instance carries none of the author's assumptions, which is the entire point of review. The command deliberately runs the review in a new `claude -p` process, not in your current session.
-- **Bonus:** run `/ponytail-review` on the same diff for the opposite class of problem — code that shouldn't exist. Claude finds bugs; Ponytail hands back a delete-list.
 
 ### Stage 3 — LLD
 
