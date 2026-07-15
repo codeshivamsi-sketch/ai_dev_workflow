@@ -217,140 +217,34 @@ All open source. One graph tool. Weekend setup. The agent didn't get smarter —
 
 ## Setup
 
-No cloning, no copying files. The script creates everything.
+**Prerequisites:** Claude Code (logged in), Node 18+, Python 3.10+, git.
 
-### Prerequisites
+Open Claude Code in the repo you want to equip and paste:
 
-- **Claude Code** installed and logged in (Pro/Max or API key)
-- **Node 18+**, **Python 3.10+**, **git**
+> *Fetch https://raw.githubusercontent.com/codeshivamsi-sketch/ai_dev_workflow/main/setup.sh, show me a summary of what it will do, then run it. For any step that fails or prints a [manual] warning, find that tool's official install docs, install it the current correct way for my OS, and verify it works. When the script finishes: (1) analyze this codebase and fill every `<blank>` in CLAUDE.md from what you actually find; (2) run the hook command in `.claude/settings.json` once and fix it if it fails. Show me both files for approval before saving. Ask me before anything that needs sudo.*
 
-### Install — one prompt, any repo
-
-Open Claude Code **in the repo you want to equip** (new or existing) and paste:
-
-> *Fetch https://raw.githubusercontent.com/codeshivamsi-sketch/ai_dev_workflow/main/setup.sh, show me a summary of what it will do, then run it. For any step that fails or prints a [manual] warning, find that tool's official install docs, install it the current correct way for my OS, and verify it works. When the script finishes: (1) analyze this codebase and fill every `<blank>` in CLAUDE.md — stack, commands, conventions, invariants, gotchas — from what you actually find; (2) run the hook command in `.claude/settings.json` once and fix it if it fails. Show me both files for approval before saving. Ask me before anything that needs sudo.*
-
-The script only creates files that don't exist — safe on brand-new and existing projects alike. Nothing gets overwritten. (This repo is the reference implementation; **Use this template** also works for greenfield projects.)
-
-### How the script is organized
-
-`setup.sh` is a thin orchestrator — it doesn't hold the prompts inline anymore. The repo is split so every piece is editable on its own:
-
-```
-setup.sh              # entry point: resolves its dir, runs the steps in order
-lib/                  # one file per step
-  common.sh           #   shared helpers: step/warn, copy-if-missing
-  00-prereqs.sh … 07-summary.sh   # prereqs, codegraph, skills, commands, hooks, docs, summary
-templates/            # every prompt/file the script writes, editable as plain files
-  commands/{arch,blast,review}.md
-  skills/{integration-test,adr}.SKILL.md
-  claude-md.md, mcp.json, settings.json.tpl, docs/adr/0000-template.md
-```
-
-To change what `/blast` says or tweak the integration-test rules, edit the file under `templates/` — no bash involved. **The one-liner above still works unchanged:** when `setup.sh` is piped via `curl` (detached from `lib/` and `templates/`), it clones the repo to a temp dir and re-execs itself from there, so it always has its templates — you still don't clone anything by hand.
-
-**What gets installed:**
-- `~/.claude/skills/` → **Superpowers**, **Ponytail** (personal, all repos)
-- Created in the repo if missing: `.mcp.json` (codegraph), `CLAUDE.md` (Claude fills the blanks from your code), hooks auto-wired to your detected lint/typecheck commands, the `integration-test` and `/adr` skills, the ADR template, and the **/arch**, **/blast**, **/review** slash commands in `.claude/commands/`
-
-**What Claude will ask you during install:**
-- Permission to run the script and individual commands (approve)
-- Confirmation before anything needing `sudo`
-- **Approval of the CLAUDE.md and hook config it filled in** — read these; it's the only judgment call in the whole setup
-
-### Activate
-
-1. Restart Claude Code in the repo → *"This project defines MCP servers — allow?"* → **approve**. codegraph is live.
-2. Skim the CLAUDE.md Claude wrote — correct anything wrong, and keep the **Tool routing** block; it's what makes codegraph, /blast, and plan-first fire automatically instead of occasionally.
-3. Commit `CLAUDE.md`, `.claude/`, and `.mcp.json` — teammates get the repo-level stack on clone.
-
-### What fires on its own after this
-
-| | |
-|---|---|
-| **Ponytail** | always-on — nothing to invoke |
-| **Superpowers, skills** | task-match automatically; force with *"plan first"* / the skill's name |
-| **codegraph** | agent queries it per the Tool routing block in CLAUDE.md |
-| **/arch, /blast, /review** | manual — see "How to use each tool" above |
-
-### Verify (30 seconds)
-
-- Ask Claude Code to edit any file → the lint/typecheck hook runs
-- Ask *"what calls X?"* → codegraph answers
-- Run `/blast` → hop-sorted impact report lands as a timestamped file in `docs/blast/`
-
-Done. ✅
-
-### Where things run
-
-Everything runs on your machine — understanding, writing, blast radius, review. *Author ≠ examiner* holds by **instance**, not machine: the Claude session that wrote the code is never the one that reviews it — `/review` spawns a fresh one.
+Restart Claude Code, approve the MCP prompt, commit `CLAUDE.md`, `.claude/`, `.mcp.json`. Done — try `/arch`, `/blast`, `/review`.
 
 ---
 
 ## Bonus
 
-Beyond the core loop — worth adopting once the basics are habitual.
+### 🧪 Integration tests
 
-### 🧪 Integration tests — Claude writes them
+1. Ask, naming the flows: *"Write integration tests for checkout: valid card → order created, stock decremented; expired card → 402, no order row."*
+2. Claude lists the test cases as names — approve or edit the list (your 2-minute gate).
+3. It builds the env (real DB via testcontainers), writes the tests, runs to green. New feature? It confirms they fail first.
 
-**What the script installed for you:** one file — `.claude/skills/integration-test/SKILL.md`. It contains the *rules* for writing good integration tests (assert outcomes not implementation; enumerate cases for approval first; red-before-green for new features; never weaken a failing test). Because it's a skill, those rules load automatically whenever you ask for tests. That's all the script does — no test framework, no CI job, nothing runs on its own.
-
-**What you do:** ask for tests and name the flows. That's the entire interface:
-
-```
-Write integration tests for checkout:
-- valid card → order row created, stock decremented
-- expired card → 402, and no order row
-```
-
-**What happens next (the skill drives this):**
-
-1. Claude enumerates test cases as *names only* — happy paths, edge cases, errors — and **waits for your approval.** This is your 2-minute review gate: scan the list, add what's missing ("you forgot: card declined mid-flow"), strike the over-engineered.
-2. It builds the environment — real Postgres via testcontainers, seed data, teardown; only external third parties (Stripe, email) get mocked.
-3. It writes the approved tests. For a **new** feature, it runs them first and confirms they **fail** — a test that passes before the code exists proves nothing.
-4. It implements/fixes until green, and it may not delete or weaken a failing test to get there — it must flag it to you instead.
-
-**Division of labor, in one line:** you supply the flows and the judgment (step 1's approval); the skill supplies the discipline; Claude supplies the labor. Without the skill, you'd paste the rules every time — with it, "write tests for X" is enough.
-
-**Two things this deliberately does NOT do:**
-- **Run tests automatically** — you initiate every run. If you want tests to run on every edit, that's a hook (add `npm test` to `.claude/settings.json`), a separate choice with a real cost: slow suites make every edit slow.
-- **Decide what to test** — it will ask for flows if you don't name them. Naming the flows is the part that requires knowing your product; that stays yours.
-
----
+The rules live in `.claude/skills/integration-test/SKILL.md` (installed by setup) — they load automatically whenever you ask for tests. Nothing runs on its own.
 
 ### 📚 Docs the agent can read
 
-The agent reads your *code* better than any human — so only document what code can't say. **Codegraph tells the agent what the code is; docs tell it why.**
-
-**❌ Don't write — tools derive these, always fresh:**
-- What functions do, call chains, structure → codegraph regenerates from the AST
-- Line comments explaining *what* code does
-- Exhaustive module wikis → they go stale, and stale docs are worse than none: the agent trusts them confidently and codes against a reality that no longer exists
-
-**✅ Do write — no AST contains these:**
-- **Why** — "polling, not websockets, because the client's proxy kills long-lived connections"
-- **Invariants** — "orders are never deleted, only cancelled"
-- **Intent boundaries** — what a module owns, and what it must never do
-- **Entry point** — CLAUDE.md / AGENTS.md linking to all of the above
-- **Tool routing** — when the agent should reach for which tool; auto-firing is only reliable if it's written down (see below)
-
-**How · When · Where:**
+Don't document what code already says — Claude derives structure, call chains, and behavior from the code itself; only write down what it can't infer: the *why*, invariants, and intent.
 
 | Doc | Where | When | How |
 |---|---|---|---|
-| CLAUDE.md | repo root | once, at project start | the setup prompt has Claude draft it from your code; you approve. Touch only when commands/conventions change |
-| ADR | `docs/adr/NNNN-title.md` | the moment a real decision is made — never retroactively | the `/adr` skill drafts it from the planning session; you approve. Immutable once merged |
-| Architecture map | `docs/architecture.md` | regenerate anytime | `/arch` — generated from the graph, so it can't go stale |
-| Module README | `src/<module>/README.md` | only where intent isn't obvious from the name | 5 lines max: *owns / never does / depended on by* |
-| Strict types | everywhere | always | `Money`, not `number` — types are docs the typecheck hook already enforces |
-
-**Make auto-firing reliable — the Tool routing block in CLAUDE.md** (the setup script includes it):
-
-```markdown
-## Tool routing
-- Before creating any new function or utility: query codegraph — does it already exist?
-- Before refactoring anything shared: run /blast on the affected files
-- Any non-trivial feature: plan first (Superpowers)
-```
-
-**Rule of thumb:** document what changes *rarely* (decisions, invariants); let tools derive what changes *often* (structure, call graphs). Docs written at decision time can't go stale — they record a moment, not the present.
+| CLAUDE.md | repo root | once, at project start | setup has Claude draft it from your code; you approve |
+| ADR | `docs/adr/NNNN-title.md` | the moment a decision is made — never retroactively | `/adr` skill drafts it; you approve. Immutable once merged |
+| Architecture map | `docs/architecture.md` | anytime | `/arch` — generated from the graph, can't go stale |
+| Module README | `src/<module>/README.md` | only where intent isn't obvious | 5 lines: *owns / never does / depended on by* |
+| Strict types | everywhere | always | `Money`, not `number` — the typecheck hook enforces them |
