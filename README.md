@@ -320,7 +320,7 @@ Write integration tests for checkout:
 - **Run tests automatically** — you initiate every run. If you want tests to run on every edit, that's a hook (add `npm test` to `.claude/settings.json`), a separate choice with a real cost: slow suites make every edit slow.
 - **Decide what to test** — it will ask for flows if you don't name them. Naming the flows is the part that requires knowing your product; that stays yours.
 
---
+---
 
 ### 📚 Docs the agent can read
 
