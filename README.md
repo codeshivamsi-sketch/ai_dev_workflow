@@ -1,6 +1,6 @@
 # AI Dev Workflow: Understand → Write → Review
 
-Everyone debates which AI agent codes best. The real gap is the workflow *around* the agent. Here's mine — all open source, all BYOK.
+Everyone debates which AI agent codes best. The real gap is the workflow around the agent. This is mine — all open source, installable in your repo with one prompt.
 
 ![codegraph](https://img.shields.io/badge/codegraph-1f6feb?style=for-the-badge)
 ![Mermaid](https://img.shields.io/badge/Mermaid-ff3670?style=for-the-badge&logo=mermaid&logoColor=white)
