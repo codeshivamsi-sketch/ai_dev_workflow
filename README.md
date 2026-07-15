@@ -47,8 +47,6 @@ flowchart LR
 - **Solves:** Agent editing code it doesn't understand — the #1 source of bad AI code.
 - **How it helps:** Exposes the graph over MCP → Claude Code asks "who calls this? what breaks if I change it?" and gets AST-accurate answers, not guesses. One graph powers all three stages: understanding here, reuse checks while writing, blast radius at review.
 
-![codegraph — knowledge graph of a repo](images/codegraph-graph.png)
-
 ### 🧠 Mermaid mindmap — `/arch`
 - **What:** One command turns the graph into a visual map of the architecture — modules, responsibilities, data flow, grouped semantically.
 - **Solves:** Graphs are precise but unreadable; mindmaps are readable but usually inaccurate. This gives you both.
@@ -93,8 +91,6 @@ flowchart LR
 - **Solves:** Over-engineering. Ask for a date picker → bare agent installs flatpickr + wrapper + stylesheet. Ponytail: `<input type="date">`.
 - **How:** A 7-rung ladder before writing anything: *need to exist? → already in codebase? → stdlib? → native? → installed dep? → one line? → minimum that works.*
 - **Numbers:** ~54% less code, ~20% cheaper, ~27% faster — safety guards never cut.
-
-![Ponytail benchmark — every metric down vs baseline](https://github.com/DietrichGebert/ponytail/raw/main/assets/benchmark-agentic.svg)
 
 ### 📌 CLAUDE.md
 - **What:** One file at repo root, loaded every session: stack, commands, conventions, gotchas.
