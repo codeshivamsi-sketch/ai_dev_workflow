@@ -48,9 +48,9 @@ flowchart LR
 - **How it helps:** Exposes the graph over MCP → Claude Code asks "who calls this? what breaks if I change it?" and gets AST-accurate answers, not guesses. One graph powers all three stages: understanding here, reuse checks while writing, blast radius at review.
 
 ### 🧠 Architecture map — `/arch`
-- **What:** One command turns the graph into three views: a mindmap of modules/responsibilities/data flow (grouped semantically), a schema ER diagram from your ORM models (tables, columns, FKs, relationships), and a data access map — which endpoints read/write which tables.
-- **Solves:** Graphs are precise but unreadable; mindmaps are readable but usually inaccurate. This gives you code structure, data model, and the connection between them — API surface to storage.
-- **How:** run `/arch` in Claude Code → regenerates `docs/architecture.md` with Architecture / Schema / Data Access Map sections (GitHub and VS Code render the mermaid blocks natively).
+- **What:** One command turns the graph into four views: a mindmap of modules/responsibilities/data flow (grouped semantically), a schema ER diagram from your ORM models (tables, columns, FKs, relationships), a data access map — which endpoints read/write which tables — and a delete-behavior diagram from your FK `ondelete`/`onDelete` rules (CASCADE vs RESTRICT).
+- **Solves:** Graphs are precise but unreadable; mindmaps are readable but usually inaccurate. This gives you code structure, data model, the connection between them, and what happens on delete — API surface to storage to teardown.
+- **How:** run `/arch` in Claude Code → regenerates `docs/architecture.md` with Architecture / Schema / Data Access Map / Delete Behavior sections (GitHub and VS Code render the mermaid blocks natively). Delete Behavior keeps any hand-written rationale you add below the diagram across re-runs.
 
 ```mermaid
 mindmap
@@ -171,7 +171,7 @@ flowchart TD
 |---|---|---|
 | **CLAUDE.md** | Auto (by location) | Loaded every session — your only job is keeping it truthful |
 | **codegraph** (MCP) | Auto (agent queries it) | Claude Code consults it while working; ask explicitly anytime: *"who calls X? what breaks if I change Y?"* |
-| **Architecture map** | `/arch` | Regenerates the mermaid mindmap + schema ER diagram + data access map from codegraph → `docs/architecture.md` (renders on GitHub) |
+| **Architecture map** | `/arch` | Regenerates the mermaid mindmap + schema ER diagram + data access map + delete behavior diagram from codegraph → `docs/architecture.md` (renders on GitHub) |
 | **Superpowers** | Auto (task match) | Fires on non-trivial implementation tasks; force it anytime: *"brainstorm and plan before coding"* |
 | **Ponytail** | Auto (always-on) | Constrains every coding task once installed — nothing to invoke. `/ponytail lite` to soften, `/ponytail full` to restore |
 | **Skills** | Auto (task match) | Fire when the task matches their description; invoke by name if one doesn't trigger |
@@ -197,7 +197,7 @@ flowchart TD
 | Stage | Job | Tool |
 |---|---|---|
 | Understand | Code map | codegraph |
-| Understand | Visual picture | `/arch` → docs/architecture.md (mindmap + ER diagram + data access map) |
+| Understand | Visual picture | `/arch` → docs/architecture.md (mindmap + ER diagram + data access map + delete behavior) |
 | Write | Plan first | Superpowers |
 | Write | Minimal code | Ponytail |
 | Write | Project context | CLAUDE.md |
