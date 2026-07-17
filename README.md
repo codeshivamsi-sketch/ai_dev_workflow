@@ -48,9 +48,10 @@ flowchart LR
 - **How it helps:** Exposes the graph over MCP → Claude Code asks "who calls this? what breaks if I change it?" and gets AST-accurate answers, not guesses. One graph powers all three stages: understanding here, reuse checks while writing, blast radius at review.
 
 ### 🧠 Architecture map — `/arch`
-- **What:** One command turns the graph into four views: a mindmap of modules/responsibilities/data flow (grouped semantically), a schema ER diagram from your ORM models (tables, columns, FKs, relationships), a data access map — which endpoints read/write which tables — and a delete-behavior diagram from your FK `ondelete`/`onDelete` rules (CASCADE vs RESTRICT).
-- **Solves:** Graphs are precise but unreadable; mindmaps are readable but usually inaccurate. This gives you code structure, data model, the connection between them, and what happens on delete — API surface to storage to teardown.
-- **How:** run `/arch` in Claude Code → regenerates `docs/architecture.md` with Architecture / Schema / Data Access Map / Delete Behavior sections (GitHub and VS Code render the mermaid blocks natively). Delete Behavior keeps any hand-written rationale you add below the diagram across re-runs.
+- **What:** One command turns the graph into six diagram-only views — 2 HLD, 4 LLD: a mindmap of code structure, a schema ER diagram, a delete-behavior diagram (CASCADE vs RESTRICT from your FK `ondelete`/`onDelete` rules), a data access map (which endpoints read/write which tables), a deployment diagram (your `docker-compose` services + networking), and a sequence diagram for the codebase's most representative write endpoint.
+- **Solves:** Graphs are precise but unreadable; mindmaps are readable but usually inaccurate. This gives you code structure, data model, runtime topology, and request flow — API surface to storage to deployment.
+- **How:** run `/arch` in Claude Code → regenerates `docs/architecture.md` with Code Structure / Database Schema / Delete Behavior / Data Access Map / Deployment / Request Flow sections (GitHub and VS Code render the mermaid blocks natively).
+- **Philosophy:** diagrams are the spec, minimal text — each section is a heading, a one-line caption, and the diagram, no explanatory prose. The one exception is Delete Behavior: hand-written rationale you add below its diagram survives regeneration.
 
 ```mermaid
 mindmap
@@ -140,7 +141,7 @@ flowchart TD
 
 An agent reviewing its own code just verifies its own assumptions — so review runs through three commands, each independent of the session that wrote the code:
 
-- **`/blast [paths]`** — the full-picture blast radius, human-viewable: hop-sorted table of every changed symbol's full dependency closure + a mermaid graph (changed vs impacted marked, cross-service/MFE edges dashed = inferred), and — if the diff touches models, schema files, or migrations — a DB Impact section from `db-blast`: endpoint → table read/write map, migration SQL, and a styled mermaid graph of NEW/REMOVED/CHANGED API→table edges vs the committed baseline (with a legend, and a nudge to re-run `/arch` when it makes the Data Access Map stale), plus untested nodes + risk paragraph → saved as a timestamped snapshot in `docs/blast/` with Code Impact / DB Impact / Untested / Risk sections.
+- **`/blast [paths]`** — the full-picture blast radius, human-viewable: hop-sorted table of every changed symbol's full dependency closure + a mermaid graph (changed vs impacted marked, cross-service/MFE edges dashed = inferred), and — if the diff touches models, schema files, or migrations — a diagram-first DB Impact section from `db-blast`: a styled mermaid graph of NEW/REMOVED/CHANGED API→table edges vs the committed baseline (with a legend), the migration SQL, a risk paragraph, and a one-line summary (nudging `/arch` when it makes the Data Access Map stale) — no prose table, plus untested nodes + a code-risk paragraph → saved as a timestamped snapshot in `docs/blast/` with Code Impact / DB Impact / Untested / Risk sections.
 - **`/db-blast [paths]`** — the DB-impact half on its own: trace changed code → endpoints → ORM models → tables (read vs write), preview migration SQL, flag risky ops (drops, type changes, NOT NULL on existing columns, table-locking ALTERs). Runs automatically inside `/blast`; call it standalone for a quick DB-only check.
 - **`/review`** — pipes the diff to a **fresh `claude -p` instance** (no memory of the author session) and relays findings: bugs, edge cases, violated invariants, with file:line.
 - **`/ponytail-review`** — the opposite class of problem: code that shouldn't exist. Hands back a delete-list.
@@ -171,7 +172,7 @@ flowchart TD
 |---|---|---|
 | **CLAUDE.md** | Auto (by location) | Loaded every session — your only job is keeping it truthful |
 | **codegraph** (MCP) | Auto (agent queries it) | Claude Code consults it while working; ask explicitly anytime: *"who calls X? what breaks if I change Y?"* |
-| **Architecture map** | `/arch` | Regenerates the mermaid mindmap + schema ER diagram + data access map + delete behavior diagram from codegraph → `docs/architecture.md` (renders on GitHub) |
+| **Architecture map** | `/arch` | Regenerates six diagram-only views (mindmap, schema, delete behavior, data access, deployment, request-flow sequence — HLD + LLD) from codegraph → `docs/architecture.md` (renders on GitHub) |
 | **Superpowers** | Auto (task match) | Fires on non-trivial implementation tasks; force it anytime: *"brainstorm and plan before coding"* |
 | **Ponytail** | Auto (always-on) | Constrains every coding task once installed — nothing to invoke. `/ponytail lite` to soften, `/ponytail full` to restore |
 | **Skills** | Auto (task match) | Fire when the task matches their description; invoke by name if one doesn't trigger |
@@ -197,7 +198,7 @@ flowchart TD
 | Stage | Job | Tool |
 |---|---|---|
 | Understand | Code map | codegraph |
-| Understand | Visual picture | `/arch` → docs/architecture.md (mindmap + ER diagram + data access map + delete behavior) |
+| Understand | Visual picture | `/arch` → docs/architecture.md (6 diagram-only views: HLD + LLD, minimal text) |
 | Write | Plan first | Superpowers |
 | Write | Minimal code | Ponytail |
 | Write | Project context | CLAUDE.md |
