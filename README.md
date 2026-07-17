@@ -177,6 +177,7 @@ flowchart TD
 | **Skills** | Auto (task match) | Fire when the task matches their description; invoke by name if one doesn't trigger |
 | **Blast radius** | `/blast [paths]` | Full dependency closure of your diff, hop-sorted + mermaid, plus DB impact when the diff touches models/schema/migrations → `docs/blast/<date>-<time>-blast.md` (new snapshot per run) |
 | **DB impact** | `/db-blast [paths]` | Endpoint → table read/write map (tagged new/removed/changed vs the committed baseline), migration SQL preview, risky-op flags — standalone, or auto-folded into `/blast` |
+| **Docs sync** | `/docs-sync [focus]` | Refreshes README.md (stack, badges, diagrams, services, endpoints, phases) and `docs/architecture.md` (via `/arch`) to match the current codebase — shows a diff of every doc and waits for approval before writing |
 | **Fresh review** | `/review` | Pipes the diff to a fresh `claude -p` instance — findings from a session with no author bias |
 
 **A full local review, in three commands (all inside Claude Code):**
@@ -206,6 +207,7 @@ flowchart TD
 | Review | Blast radius (code + DB) | `/blast` → docs/blast/ |
 | Review | DB impact | `/db-blast` |
 | Review | Quality | `/review` — fresh claude -p |
+| Maintain | Keep docs current | `/docs-sync` → README.md + docs/architecture.md |
 
 All open source. One graph tool. Weekend setup. The agent didn't get smarter — the workflow did.
 
@@ -219,7 +221,7 @@ Open Claude Code in the repo you want to equip and paste:
 
 > *Fetch https://raw.githubusercontent.com/codeshivamsi-sketch/ai_dev_workflow/main/setup.sh, show me a summary of what it will do, then run it. For any step that fails or prints a [manual] warning, find that tool's official install docs, install it the current correct way for my OS, and verify it works. When the script finishes: (1) analyze this codebase and fill every `<blank>` in CLAUDE.md from what you actually find; (2) run the hook command in `.claude/settings.json` once and fix it if it fails. Show me both files for approval before saving. Ask me before anything that needs sudo.*
 
-Restart Claude Code, approve the MCP prompt, commit `CLAUDE.md`, `.claude/`, `.mcp.json`. Done — try `/arch`, `/blast`, `/db-blast`, `/review`.
+Restart Claude Code, approve the MCP prompt, commit `CLAUDE.md`, `.claude/`, `.mcp.json`. Done — try `/arch`, `/blast`, `/db-blast`, `/docs-sync`, `/review`.
 
 ---
 
@@ -242,5 +244,6 @@ Don't document what code already says — Claude derives structure, call chains,
 | CLAUDE.md | repo root | once, at project start | setup has Claude draft it from your code; you approve |
 | ADR | `docs/adr/NNNN-title.md` | the moment a decision is made — never retroactively | `/adr` skill drafts it; you approve. Immutable once merged |
 | Architecture map | `docs/architecture.md` | anytime | `/arch` — generated from the graph, can't go stale |
+| README.md | repo root | whenever it drifts from the code | `/docs-sync` — re-derives stack/badges/diagrams/services/endpoints/phases, shows a diff, you approve |
 | Module README | `src/<module>/README.md` | only where intent isn't obvious | 5 lines: *owns / never does / depended on by* |
 | Strict types | everywhere | always | `Money`, not `number` — the typecheck hook enforces them |
