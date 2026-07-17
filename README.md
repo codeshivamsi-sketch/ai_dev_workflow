@@ -47,10 +47,10 @@ flowchart LR
 - **Solves:** Agent editing code it doesn't understand — the #1 source of bad AI code.
 - **How it helps:** Exposes the graph over MCP → Claude Code asks "who calls this? what breaks if I change it?" and gets AST-accurate answers, not guesses. One graph powers all three stages: understanding here, reuse checks while writing, blast radius at review.
 
-### 🧠 Mermaid mindmap — `/arch`
-- **What:** One command turns the graph into a visual map of the architecture — modules, responsibilities, data flow, grouped semantically.
-- **Solves:** Graphs are precise but unreadable; mindmaps are readable but usually inaccurate. This gives you both.
-- **How:** run `/arch` in Claude Code → regenerates `docs/architecture.md` (GitHub and VS Code render the mermaid block natively).
+### 🧠 Mermaid mindmap + schema — `/arch`
+- **What:** One command turns the graph into a visual map of the architecture — modules, responsibilities, data flow, grouped semantically — plus a schema ER diagram derived from your ORM models (tables, columns, FKs, relationships).
+- **Solves:** Graphs are precise but unreadable; mindmaps are readable but usually inaccurate. This gives you both, for code structure and data model alike.
+- **How:** run `/arch` in Claude Code → regenerates `docs/architecture.md` with an Architecture section (mindmap) and a Schema section (ER diagram) (GitHub and VS Code render the mermaid blocks natively).
 
 ```mermaid
 mindmap
@@ -140,7 +140,8 @@ flowchart TD
 
 An agent reviewing its own code just verifies its own assumptions — so review runs through three commands, each independent of the session that wrote the code:
 
-- **`/blast [paths]`** — the blast radius, human-viewable: hop-sorted table of every changed symbol's full dependency closure + a mermaid graph (changed vs impacted marked, cross-service/MFE edges dashed = inferred) + untested nodes + risk paragraph → saved as a timestamped snapshot in `docs/blast/`.
+- **`/blast [paths]`** — the full-picture blast radius, human-viewable: hop-sorted table of every changed symbol's full dependency closure + a mermaid graph (changed vs impacted marked, cross-service/MFE edges dashed = inferred), and — if the diff touches models, schema files, or migrations — a DB Impact section (endpoint → table read/write map + migration SQL) from `db-blast`, plus untested nodes + risk paragraph → saved as a timestamped snapshot in `docs/blast/` with Code Impact / DB Impact / Untested / Risk sections.
+- **`/db-blast [paths]`** — the DB-impact half on its own: trace changed code → endpoints → ORM models → tables (read vs write), preview migration SQL, flag risky ops (drops, type changes, NOT NULL on existing columns, table-locking ALTERs). Runs automatically inside `/blast`; call it standalone for a quick DB-only check.
 - **`/review`** — pipes the diff to a **fresh `claude -p` instance** (no memory of the author session) and relays findings: bugs, edge cases, violated invariants, with file:line.
 - **`/ponytail-review`** — the opposite class of problem: code that shouldn't exist. Hands back a delete-list.
 
@@ -170,22 +171,23 @@ flowchart TD
 |---|---|---|
 | **CLAUDE.md** | Auto (by location) | Loaded every session — your only job is keeping it truthful |
 | **codegraph** (MCP) | Auto (agent queries it) | Claude Code consults it while working; ask explicitly anytime: *"who calls X? what breaks if I change Y?"* |
-| **Architecture map** | `/arch` | Regenerates the mermaid mindmap from codegraph → `docs/architecture.md` (renders on GitHub) |
+| **Architecture map** | `/arch` | Regenerates the mermaid mindmap + schema ER diagram from codegraph → `docs/architecture.md` (renders on GitHub) |
 | **Superpowers** | Auto (task match) | Fires on non-trivial implementation tasks; force it anytime: *"brainstorm and plan before coding"* |
 | **Ponytail** | Auto (always-on) | Constrains every coding task once installed — nothing to invoke. `/ponytail lite` to soften, `/ponytail full` to restore |
 | **Skills** | Auto (task match) | Fire when the task matches their description; invoke by name if one doesn't trigger |
-| **Blast radius** | `/blast [paths]` | Full dependency closure of your diff, hop-sorted + mermaid → `docs/blast/<date>-<time>-blast.md` (new snapshot per run) |
+| **Blast radius** | `/blast [paths]` | Full dependency closure of your diff, hop-sorted + mermaid, plus DB impact when the diff touches models/schema/migrations → `docs/blast/<date>-<time>-blast.md` (new snapshot per run) |
+| **DB impact** | `/db-blast [paths]` | Endpoint → table read/write map, migration SQL preview, risky-op flags — standalone, or auto-folded into `/blast` |
 | **Fresh review** | `/review` | Pipes the diff to a fresh `claude -p` instance — findings from a session with no author bias |
 
 **A full local review, in three commands (all inside Claude Code):**
 
 ```
-/blast              # 1. blast radius → timestamped snapshot in docs/blast/
+/blast              # 1. blast radius (code + DB) → timestamped snapshot in docs/blast/
 /review             # 2. fresh-instance diff review
 /ponytail-review    # 3. over-engineering check
 ```
 
-Everything above runs locally — blast radius included.
+`/db-blast` runs automatically inside `/blast` when relevant — call it on its own for a quick DB-only check. Everything above runs locally — blast radius included.
 
 ---
 
@@ -194,14 +196,15 @@ Everything above runs locally — blast radius included.
 | Stage | Job | Tool |
 |---|---|---|
 | Understand | Code map | codegraph |
-| Understand | Visual picture | `/arch` → docs/architecture.md |
+| Understand | Visual picture | `/arch` → docs/architecture.md (mindmap + ER diagram) |
 | Write | Plan first | Superpowers |
 | Write | Minimal code | Ponytail |
 | Write | Project context | CLAUDE.md |
 | Write | Codebase awareness | Code graph MCP |
 | Write | Enforcement | Hooks |
 | Write | Procedures | Skills |
-| Review | Blast radius | `/blast` → docs/blast/ |
+| Review | Blast radius (code + DB) | `/blast` → docs/blast/ |
+| Review | DB impact | `/db-blast` |
 | Review | Quality | `/review` — fresh claude -p |
 
 All open source. One graph tool. Weekend setup. The agent didn't get smarter — the workflow did.
@@ -216,7 +219,7 @@ Open Claude Code in the repo you want to equip and paste:
 
 > *Fetch https://raw.githubusercontent.com/codeshivamsi-sketch/ai_dev_workflow/main/setup.sh, show me a summary of what it will do, then run it. For any step that fails or prints a [manual] warning, find that tool's official install docs, install it the current correct way for my OS, and verify it works. When the script finishes: (1) analyze this codebase and fill every `<blank>` in CLAUDE.md from what you actually find; (2) run the hook command in `.claude/settings.json` once and fix it if it fails. Show me both files for approval before saving. Ask me before anything that needs sudo.*
 
-Restart Claude Code, approve the MCP prompt, commit `CLAUDE.md`, `.claude/`, `.mcp.json`. Done — try `/arch`, `/blast`, `/review`.
+Restart Claude Code, approve the MCP prompt, commit `CLAUDE.md`, `.claude/`, `.mcp.json`. Done — try `/arch`, `/blast`, `/db-blast`, `/review`.
 
 ---
 

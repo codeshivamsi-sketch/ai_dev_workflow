@@ -27,5 +27,11 @@
 - Blast-radius snapshots: `docs/blast/`
 - Module intent: `src/<module>/README.md`
 
+## Documentation
+- After any change affecting architecture, stack, services, endpoints, or
+  phases, update README.md in the same task — no stale references.
+- If a technology is removed, remove it everywhere (badges, diagrams,
+  phase notes).
+
 ## Gotchas
 - <things that will bite an agent>

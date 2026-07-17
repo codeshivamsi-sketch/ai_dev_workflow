@@ -1,4 +1,4 @@
-# lib/07-summary.sh — closing checklist: what Claude does next, what you do.
+# lib/08-summary.sh — closing checklist: what Claude does next, what you do.
 
 summary() {
   step "Handled by Claude after this script (per the install prompt)"
@@ -9,5 +9,5 @@ summary() {
   warn "Restart Claude Code in this repo and APPROVE the project MCP servers when prompted"
 
   echo -e "\n\033[1;32mDone. Commit CLAUDE.md, .claude/, and .mcp.json so the whole team gets the stack.\033[0m"
-  echo -e "\033[1;32mTry it: /arch (architecture map), /blast (blast radius), /review (fresh-instance review).\033[0m"
+  echo -e "\033[1;32mTry it: /arch (architecture map), /blast (blast radius), /db-blast (DB impact), /review (fresh-instance review).\033[0m"
 }

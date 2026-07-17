@@ -66,9 +66,10 @@ done
 prereqs                 # 0. node / python3 / claude
 codegraph_mcp           # 1. .mcp.json (codegraph)
 personal_skills         # 2. ~/.claude/skills (Superpowers, Ponytail)
-slash_commands          # 3. /arch, /blast, /review
+slash_commands          # 3. /arch, /blast, /db-blast, /review
 claude_md               # 4a. CLAUDE.md template
 hooks                   # 4b. lint/typecheck PostToolUse hook
 integration_test_skill  # 5. integration-test skill
 docs_adr                # 6. ADR template + /adr skill
-summary                 # 7. closing checklist
+db_blast_skill          # 7. db-blast skill (DB impact)
+summary                 # 8. closing checklist
