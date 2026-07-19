@@ -43,9 +43,11 @@ reports. Structure the report with these sections, in order:
   b. the migration SQL block (exact DDL), or "no migration files changed"
   c. a one-paragraph risk assessment naming every flagged op in plain
      language
-  d. a one-line summary — if any NEW/REMOVED/CHANGED edges exist, this is
-     where you note that the Data Access Map in docs/architecture.md is
-     now stale and suggest re-running /arch
+  d. a one-line summary — if any NEW/REMOVED/CHANGED edges exist and this
+     diff changes a component-level data flow (a service/endpoint now
+     touches a datastore it didn't before, or vice versa), note that the
+     High-Level Architecture diagram in docs/architecture.md may be stale
+     and suggest re-running /arch
   If step 3 didn't fire, this section is just "No DB-touching changes"
 - `## Untested` — anything in the closure with no test touching it
 - `## Risk` — one paragraph covering code risk (from Code Impact). DB risk

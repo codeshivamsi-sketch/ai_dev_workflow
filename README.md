@@ -17,7 +17,7 @@ Everyone debates which AI agent codes best. The real gap is the workflow around 
 flowchart LR
     subgraph S1["1️⃣ UNDERSTAND"]
         CG[codegraph]
-        MM[Mermaid mindmap — /arch]
+        MM[Mermaid HLD — /arch]
     end
     subgraph S2["2️⃣ WRITE"]
         SP[Superpowers]
@@ -48,23 +48,30 @@ flowchart LR
 - **How it helps:** Exposes the graph over MCP → Claude Code asks "who calls this? what breaks if I change it?" and gets AST-accurate answers, not guesses. One graph powers all three stages: understanding here, reuse checks while writing, blast radius at review.
 
 ### 🧠 Architecture map — `/arch`
-- **What:** One command turns the graph into six diagram-only views — 2 HLD, 4 LLD: a mindmap of code structure, a schema ER diagram, a delete-behavior diagram (CASCADE vs RESTRICT from your FK `ondelete`/`onDelete` rules), a data access map (which endpoints read/write which tables), a deployment diagram (your `docker-compose` services + networking), and a sequence diagram for the codebase's most representative write endpoint.
-- **Solves:** Graphs are precise but unreadable; mindmaps are readable but usually inaccurate. This gives you code structure, data model, runtime topology, and request flow — API surface to storage to deployment.
-- **How:** run `/arch` in Claude Code → regenerates `docs/architecture.md` with Code Structure / Database Schema / Delete Behavior / Data Access Map / Deployment / Request Flow sections (GitHub and VS Code render the mermaid blocks natively).
-- **Philosophy:** diagrams are the spec, minimal text — each section is a heading, a one-line caption, and the diagram, no explanatory prose. The one exception is Delete Behavior: hand-written rationale you add below its diagram survives regeneration.
+- **What:** One command, two static diagram-only views by default: a High-Level Architecture diagram (every real component discovered from `docker-compose`, codegraph module/service boundaries, and detected datastores — one system picture, with ports and data flows) and an ER diagram (tables, columns, FKs — with CASCADE/RESTRICT delete rules folded right into the relationship labels, no separate section). Prompt it with an endpoint instead and it switches modes: `/arch show flow [endpoint]` traces that one endpoint's full call path and renders a call-tree mindmap; `/arch sequence [endpoint]` renders just the sequence diagram.
+- **Solves:** Graphs are precise but unreadable; mindmaps are readable but usually inaccurate. Two diagrams give you the whole system + data model without fragmenting into a diagram per concern — and per-endpoint detail is there when you ask for it, not auto-generated for one arbitrarily-picked endpoint every time.
+- **How:** run `/arch` in Claude Code → regenerates `docs/architecture.md` with High-Level Architecture / ER Diagram sections, plus a closing pointer to the two on-demand modes (GitHub and VS Code render the mermaid blocks natively). On-demand traces are shown inline, never written to disk.
+- **Philosophy:** diagrams are the spec, minimal text — each section is a heading, a one-line caption, and the diagram, no explanatory prose.
 
 ```mermaid
-mindmap
-  root((my-app))
-    api
-      routes
-      middleware
-    services
-      auth
-      billing
-    db
-      models
-      migrations
+flowchart LR
+    subgraph api["api"]
+        routes
+        middleware
+    end
+    subgraph services["services"]
+        auth
+        billing
+    end
+    db[(Postgres)]
+    routes --> services
+    services -->|R/W| db
+```
+
+```
+/arch                          # regenerate the 2 static views
+/arch show flow POST /checkout  # call-tree mindmap for one endpoint
+/arch sequence POST /checkout   # just the sequence diagram
 ```
 
 ### Stage 1 — LLD
@@ -74,7 +81,7 @@ flowchart LR
     R[(Repo)] -->|"tree-sitter AST parse"| CG[codegraph]
     CG -->|"knowledge graph"| DB[(local graph DB)]
     DB -->|"MCP: who calls X? what breaks?"| CC[Claude Code]
-    CC -->|"/arch — semantic grouping"| MM["docs/architecture.md<br/>(mermaid mindmap)"]
+    CC -->|"/arch — component discovery"| MM["docs/architecture.md<br/>(mermaid HLD + ER diagram)"]
     MM --> Dev([You: read the map])
 ```
 
@@ -141,7 +148,7 @@ flowchart TD
 
 An agent reviewing its own code just verifies its own assumptions — so review runs through three commands, each independent of the session that wrote the code:
 
-- **`/blast [paths]`** — the full-picture blast radius, human-viewable: hop-sorted table of every changed symbol's full dependency closure + a mermaid graph (changed vs impacted marked, cross-service/MFE edges dashed = inferred), and — if the diff touches models, schema files, or migrations — a diagram-first DB Impact section from `db-blast`: a styled mermaid graph of NEW/REMOVED/CHANGED API→table edges vs the committed baseline (with a legend), the migration SQL, a risk paragraph, and a one-line summary (nudging `/arch` when it makes the Data Access Map stale) — no prose table, plus untested nodes + a code-risk paragraph → saved as a timestamped snapshot in `docs/blast/` with Code Impact / DB Impact / Untested / Risk sections.
+- **`/blast [paths]`** — the full-picture blast radius, human-viewable: hop-sorted table of every changed symbol's full dependency closure + a mermaid graph (changed vs impacted marked, cross-service/MFE edges dashed = inferred), and — if the diff touches models, schema files, or migrations — a diagram-first DB Impact section from `db-blast`: a styled mermaid graph of NEW/REMOVED/CHANGED API→table edges vs the committed baseline (with a legend), the migration SQL, a risk paragraph, and a one-line summary (nudging `/arch` when it makes the High-Level Architecture diagram stale) — no prose table, plus untested nodes + a code-risk paragraph → saved as a timestamped snapshot in `docs/blast/` with Code Impact / DB Impact / Untested / Risk sections.
 - **`/db-blast [paths]`** — the DB-impact half on its own: trace changed code → endpoints → ORM models → tables (read vs write), preview migration SQL, flag risky ops (drops, type changes, NOT NULL on existing columns, table-locking ALTERs). Runs automatically inside `/blast`; call it standalone for a quick DB-only check.
 - **`/review`** — pipes the diff to a **fresh `claude -p` instance** (no memory of the author session) and relays findings: bugs, edge cases, violated invariants, with file:line.
 - **`/ponytail-review`** — the opposite class of problem: code that shouldn't exist. Hands back a delete-list.
@@ -172,7 +179,7 @@ flowchart TD
 |---|---|---|
 | **CLAUDE.md** | Auto (by location) | Loaded every session — your only job is keeping it truthful |
 | **codegraph** (MCP) | Auto (agent queries it) | Claude Code consults it while working; ask explicitly anytime: *"who calls X? what breaks if I change Y?"* |
-| **Architecture map** | `/arch` | Regenerates six diagram-only views (mindmap, schema, delete behavior, data access, deployment, request-flow sequence — HLD + LLD) from codegraph → `docs/architecture.md` (renders on GitHub) |
+| **Architecture map** | `/arch` | Regenerates 2 static diagram-only views (High-Level Architecture, ER diagram with delete behavior folded in) from codegraph → `docs/architecture.md`. Prompt `/arch show flow [endpoint]` or `/arch sequence [endpoint]` for on-demand endpoint traces, shown inline (renders on GitHub) |
 | **Superpowers** | Auto (task match) | Fires on non-trivial implementation tasks; force it anytime: *"brainstorm and plan before coding"* |
 | **Ponytail** | Auto (always-on) | Constrains every coding task once installed — nothing to invoke. `/ponytail lite` to soften, `/ponytail full` to restore |
 | **Skills** | Auto (task match) | Fire when the task matches their description; invoke by name if one doesn't trigger |
@@ -198,7 +205,8 @@ flowchart TD
 | Stage | Job | Tool |
 |---|---|---|
 | Understand | Code map | codegraph |
-| Understand | Visual picture | `/arch` → docs/architecture.md (6 diagram-only views: HLD + LLD, minimal text) |
+| Understand | Visual picture | `/arch` → docs/architecture.md (2 static views, minimal text) |
+| Understand | Endpoint trace | `/arch show flow [endpoint]` / `/arch sequence [endpoint]` — on demand, shown inline |
 | Write | Plan first | Superpowers |
 | Write | Minimal code | Ponytail |
 | Write | Project context | CLAUDE.md |

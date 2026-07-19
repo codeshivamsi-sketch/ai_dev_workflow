@@ -10,9 +10,9 @@ empty, refresh everything below; otherwise limit to the named doc(s)/area.
    technology/service/phase appears (badges, diagrams, phase notes) — not
    just the first spot found.
 2. docs/architecture.md — regenerate by invoking the /arch command's flow
-   (mindmap + schema erDiagram + data access map). Do not reimplement
-   /arch's generation logic here — orchestrate it; /arch remains the
-   single source of truth and stays usable standalone.
+   (High-Level Architecture + ER Diagram). Do not reimplement /arch's
+   generation logic here — orchestrate it; /arch remains the single source
+   of truth and stays usable standalone.
 3. Anything you can't verify from the code itself — prose claims, product
    descriptions, "why" statements — don't guess: list it separately as
    "needs manual review" instead of rewriting it.

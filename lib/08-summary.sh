@@ -9,5 +9,5 @@ summary() {
   warn "Restart Claude Code in this repo and APPROVE the project MCP servers when prompted"
 
   echo -e "\n\033[1;32mDone. Commit CLAUDE.md, .claude/, and .mcp.json so the whole team gets the stack.\033[0m"
-  echo -e "\033[1;32mTry it: /arch (architecture map), /blast (blast radius), /db-blast (DB impact), /docs-sync (refresh all docs), /review (fresh-instance review).\033[0m"
+  echo -e "\033[1;32mTry it: /arch (architecture map — or /arch show flow [endpoint] / /arch sequence [endpoint] for on-demand traces), /blast (blast radius), /db-blast (DB impact), /docs-sync (refresh all docs), /review (fresh-instance review).\033[0m"
 }
